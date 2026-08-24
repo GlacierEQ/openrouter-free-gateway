@@ -89,7 +89,28 @@ FREE_MODELS_FALLBACK: List[Dict[str, Any]] = [
 
 
 def get_openrouter_api_key() -> str:
-    return os.environ.get("OPENROUTER_API_KEY", "").strip()
+    key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if key:
+        return key
+
+    # Check local .env files
+    env_paths = [
+        Path.home() / ".config" / "opencode" / ".env",
+        Path.home() / ".config" / "kilo" / ".env",
+        Path.home() / ".kilo" / ".env",
+        Path.home() / ".env",
+    ]
+    for ep in env_paths:
+        if ep.exists():
+            try:
+                for line in ep.read_text(encoding="utf-8").splitlines():
+                    if line.startswith("OPENROUTER_API_KEY="):
+                        k = line.split("=", 1)[1].strip()
+                        if k:
+                            return k
+            except Exception:
+                pass
+    return ""
 
 
 def list_free_models(api_key: Optional[str] = None) -> List[Dict[str, Any]]:
