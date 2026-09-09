@@ -1,0 +1,149 @@
+{
+  "version": "2.0.0",
+  "metadata": {
+    "created": "2026-09-01",
+    "author": "APEX Master Operator",
+    "description": "Hardened model routing configuration with circuit breakers and health checks"
+  },
+    "primary_model": "nvidia/nemotron-3.5-lightning:free",
+    "model_profiles": {
+      "coding_agent": {
+        "primary": "poolside/laguna-s-2.1:free",
+        "secondary": "nvidia/nemotron-3.5-lightning:free",
+        "tertiary": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "emergency": "deepseek/deepseek-r1:free",
+        "description": "Optimized for code generation, reasoning, and agentic tasks"
+      },
+      "multimodal_perception": {
+        "primary": "dots-studio/dots-3-note-preview:free",
+        "secondary": "inclusionai/ling-3.0-flash-sante:free",
+        "tertiary": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+        "description": "Optimized for vision, image, and multimodal processing"
+      },
+      "reasoning_long_context": {
+        "primary": "inclusionai/ling-3.0-flash-sante:free",
+        "secondary": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "tertiary": "deepseek/deepseek-r1:free",
+        "description": "Optimized for 1M+ context reasoning tasks"
+      },
+      "high_throughput": {
+        "primary": "nvidia/nemotron-3.5-lightning:free",
+        "secondary": "cohere/north-mini-code:free",
+        "description": "Optimized for fast response times, lower quality tolerance"
+      }
+    },
+  "circuit_breaker": {
+    "enabled": true,
+    "failure_threshold": 3,
+    "timeout_seconds": 60,
+    "reset_timeout_seconds": 300,
+    "half_open_attempts": 2
+  },
+  "connection_pool": {
+    "max_connections": 5,
+    "connection_timeout_seconds": 30,
+    "read_timeout_seconds": 60,
+    "retry_attempts": 2,
+    "retry_backoff_multiplier": 2.0,
+    "max_retry_delay_seconds": 30
+  },
+    "health_check": {
+      "enabled": true,
+      "interval_seconds": 300,
+      "timeout_seconds": 10,
+      "models_to_check": [
+        "poolside/laguna-s-2.1:free",
+        "nvidia/nemotron-3.5-lightning:free",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "deepseek/deepseek-r1:free"
+      ]
+    },
+  "rate_limiting": {
+    "enabled": true,
+    "requests_per_minute": 60,
+    "burst_size": 10,
+    "cooldown_seconds": 60
+  },
+    "fallback_chain": [
+      {
+        "name": "poolside_laguna_s",
+        "id": "poolside/laguna-s-2.1:free",
+        "priority": 1,
+        "weight": 40,
+        "context_length": 262144,
+        "capabilities": ["coding", "agentic"],
+        "warmup_required": true
+      },
+      {
+        "name": "nemotron_lightning",
+        "id": "nvidia/nemotron-3.5-lightning:free",
+        "priority": 2,
+        "weight": 25,
+        "context_length": 1000000,
+        "capabilities": ["coding", "reasoning", "agentic"],
+        "warmup_required": false
+      },
+      {
+        "name": "ling_sante",
+        "id": "inclusionai/ling-3.0-flash-sante:free",
+        "priority": 3,
+        "weight": 15,
+        "context_length": 128000,
+        "capabilities": ["multimodal", "perception"],
+        "warmup_required": false
+      },
+      {
+        "name": "nemotron_ultra",
+        "id": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "priority": 4,
+        "weight": 10,
+        "context_length": 1000000,
+        "capabilities": ["reasoning", "coding", "multimodal"],
+        "warmup_required": true
+      },
+      {
+        "name": "deepseek_r1",
+        "id": "deepseek/deepseek-r1:free",
+        "priority": 5,
+        "weight": 5,
+        "context_length": 163840,
+        "capabilities": ["reasoning", "coding"],
+        "warmup_required": true
+      },
+      {
+        "name": "openrouter_free_router",
+        "id": "openrouter/free",
+        "priority": 10,
+        "weight": 0,
+        "automated_fallback": true,
+        "description": "Automatic random selection from available free models"
+      }
+    ],
+    "novita_failover": {
+      "enabled": true,
+      "trigger_on": ["429", "403", "401", "timeout", "connection_error"],
+      "preferred_models": [
+        "deepseek/deepseek-v4-pro",
+        "qwen/qwen3.8-max",
+        "zai-org/glm-5.2"
+      ]
+    },
+    "performance_tuning": {
+      "optimize_for": "coding_agent",
+      "default_temperature": 0.7,
+      "default_max_tokens": 4096,
+      "token_compaction_enabled": true,
+      "compact_threshold_percent": 80,
+      "reasoning_effort": "high"
+    },
+    "backend_health": {
+      "backend_status": {
+        "ollama": "DISABLED (HTTP 000 on /api/generate — connection refused)",
+        "mesh-llm": "DISABLED (localhost:9337 unreachable)",
+        "titan": "DISABLED (localhost:48420 unreachable)",
+        "kilo": "ACTIVE",
+        "openrouter": "ACTIVE",
+        "novita": "STANDBY"
+      }
+    }
+}
